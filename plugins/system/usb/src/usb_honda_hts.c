@@ -217,6 +217,7 @@ static void hts_feed(uint8_t b) {
 }
 
 void usb_hts_init(void) {
+    hts_tx_pending = false; 
     hts.state = HTS_IDLE;
     hts.slots_ready = false;
     hts.good_packets = hts.bad_packets = hts.timeouts = 0;
