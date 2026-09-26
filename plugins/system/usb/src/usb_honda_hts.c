@@ -237,7 +237,36 @@ void usb_hts_init(void) {
 }
 
 void usb_hts_rx(const uint8_t *data, uint32_t len) {
-    for (uint32_t i = 0; i < len; ++i) hts_feed(data[i]);
+    /*
+     * Diagnostic commands:
+     * F1 = clear trace
+     * F0 = return trace: first byte is length, followed by captured bytes
+     */
+    if (len == 1 && data[0] == 0xF1) {
+        hts_trace_len = 0;
+        return;
+    }
+
+    if (len == 1 && data[0] == 0xF0) {
+        if (tud_cdc_n_write_available(0) >= (uint32_t)(hts_trace_len + 1)) {
+            tud_cdc_n_write_char(0, (char)hts_trace_len);
+
+            if (hts_trace_len) {
+                tud_cdc_n_write(0, hts_trace, hts_trace_len);
+            }
+
+            tud_cdc_n_write_flush(0);
+        }
+        return;
+    }
+
+    for (uint32_t i = 0; i < len; ++i) {
+        if (hts_trace_len < HTS_TRACE_SIZE) {
+            hts_trace[hts_trace_len++] = data[i];
+        }
+
+        hts_feed(data[i]);
+    }
 }
 
 void usb_hts_task(void) {
