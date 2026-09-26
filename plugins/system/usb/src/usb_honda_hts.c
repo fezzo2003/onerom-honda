@@ -3,7 +3,19 @@
 #include "tusb.h"
 
 static hts_context_t hts;
+static bool hts_tx_pending = false;
+static uint8_t hts_tx_pending_byte = 0;
 
+static void hts_try_pending_reply(void) {
+    if (!hts_tx_pending) return;
+    if (!tud_cdc_n_connected(0)) return;
+    if (!tud_cdc_n_write_available(0)) return;
+
+    if (tud_cdc_n_write(0, &hts_tx_pending_byte, 1) == 1) {
+        tud_cdc_n_write_flush(0);
+        hts_tx_pending = false;
+    }
+}
 static void hts_parser_idle(void) {
     hts.state = HTS_IDLE;
     hts.hdr_pos = 0;
@@ -55,10 +67,9 @@ static bool hts_stage_write_byte(uint32_t off, uint8_t b) {
 }
 
 static void hts_reply_byte(uint8_t b) {
-    if (tud_cdc_n_write_available(0)) {
-        tud_cdc_n_write_char(0, (char)b);
-        tud_cdc_n_write_flush(0);
-    }
+    hts_tx_pending_byte = b;
+    hts_tx_pending = true;
+    hts_try_pending_reply();
 }
 
 static void hts_fail_write(void) {
@@ -223,6 +234,8 @@ void usb_hts_rx(const uint8_t *data, uint32_t len) {
 }
 
 void usb_hts_task(void) {
+    hts_try_pending_reply();
+    
     if (hts.state != HTS_IDLE && hts.deadline_ms &&
         (int32_t)(context.timer_ms - hts.deadline_ms) >= 0) {
         hts.timeouts++;
