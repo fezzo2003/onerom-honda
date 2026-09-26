@@ -1,0 +1,109 @@
+name: Build Honda HTS Fire 28 test firmware
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'plugins/system/usb/**'
+      - 'honda/**'
+      - '.github/workflows/build-honda-hts.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake git libclang-dev libcurl4-openssl-dev \
+            libjson-c-dev libusb-1.0-0-dev libudev-dev libzip-dev \
+            make pkg-config python3 xz-utils
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Arm GNU toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/arm-gnu-toolchain
+          key: arm-toolchain-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ci/arm-toolchain-version') }}
+
+      - name: Install pinned Arm GNU toolchain
+        run: echo "TOOLCHAIN=$(ci/install-arm-toolchain.sh)" >> "$GITHUB_ENV"
+
+      - name: Build OneROM v0.7.1 minimal base firmware
+        run: make firmware
+
+      - name: Build Honda HTS + CN2 USB system plugin
+        run: make -C plugins/system/usb
+
+      - name: Build OneROM CLI
+        run: cargo build --manifest-path rust/Cargo.toml --release -p onerom-cli
+
+      - name: Validate bench ROM
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('honda/bench_base_27c256.bin')
+          b = p.read_bytes()
+          assert len(b) == 32768, f'{p} must be exactly 32768 bytes, got {len(b)}'
+          print(f'{p}: {len(b)} bytes')
+          PY
+
+      - name: Compose complete Fire 28 A/B firmware images
+        run: |
+          set -euxo pipefail
+          mkdir -p honda/build
+          CLI=rust/target/release/onerom
+          PLUGIN=plugins/system/usb/build/usb_system_plugin.bin
+          BASE=firmware/build/onerom-rp235x.bin
+          ROM=honda/bench_base_27c256.bin
+
+          for board in fire-28-a fire-28-b; do
+            out="honda/build/OneROM-Honda-HTS-CN2-${board}-BENCH.bin"
+            "$CLI" firmware build \
+              --board "$board" \
+              --base-firmware "$BASE" \
+              --plugin "file=$PLUGIN" \
+              --slot "file=$ROM,type=27C256" \
+              --config-name "Honda HTS CN2 Bench" \
+              --config-description "Honda OBD1 HTS/Ostrich + CN2 38400 bench test" \
+              --output "$out"
+            "$CLI" firmware inspect --firmware "$out" --board "$board" || true
+          done
+
+      - name: Build picotool
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/raspberrypi/pico-sdk "$RUNNER_TEMP/pico-sdk"
+          git clone --depth 1 https://github.com/raspberrypi/picotool.git "$RUNNER_TEMP/picotool"
+          git -C "$RUNNER_TEMP/picotool" submodule update --init
+          cmake -S "$RUNNER_TEMP/picotool" -B "$RUNNER_TEMP/picotool/build" \
+            -DPICO_SDK_PATH="$RUNNER_TEMP/pico-sdk" -DPICOTOOL_NO_LIBUSB=1
+          cmake --build "$RUNNER_TEMP/picotool/build" -j2
+          echo "PICOTOOL=$RUNNER_TEMP/picotool/build/picotool" >> "$GITHUB_ENV"
+
+      - name: Convert composed binaries to RP2350 UF2
+        run: |
+          set -euxo pipefail
+          for bin in honda/build/*.bin; do
+            uf2="${bin%.bin}.uf2"
+            "$PICOTOOL" uf2 convert "$bin" "$uf2" --platform rp2350
+          done
+          sha256sum honda/build/* > honda/build/SHA256SUMS.txt
+          cat honda/build/SHA256SUMS.txt
+
+      - name: Upload Fire 28 test firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: OneROM-Honda-HTS-CN2-BENCH
+          path: |
+            honda/build/*.bin
+            honda/build/*.uf2
+            honda/build/SHA256SUMS.txt
+            plugins/system/usb/build/usb_system_plugin.bin
+          if-no-files-found: error
