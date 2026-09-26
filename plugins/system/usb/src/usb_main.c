@@ -208,7 +208,7 @@ void usb_init(ora_lookup_fn_t ora_lookup_fn) {
     tusb_init(BOARD_TUD_RHPORT, &dev_init);
 
     usb_hts_init();
-    usb_cn2_init();
+    // usb_cn2_init();
 
     DEBUG("USB plugin setup complete");
 }
@@ -236,7 +236,7 @@ void usb_main(
         usb_picoboot_task();
         usb_hts_task();
         usb_cn2_task();
-        usb_plugin_task();
+        // usb_plugin_task();
         yield(NULL);
     }
 
@@ -267,11 +267,11 @@ void tud_resume_cb(void) {
 void tud_cdc_rx_cb(uint8_t itf) {
     uint8_t buf[64];
     uint32_t count = tud_cdc_n_read(itf, buf, sizeof(buf));
+
     if (itf == 0) {
         usb_hts_rx(buf, count);
-    } else if (itf == 1) {
-        usb_cn2_cdc_rx(buf, count);
     }
+}
 }
 
 // Invoked when a control transfer is received on vendor interface
