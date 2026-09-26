@@ -57,8 +57,8 @@ static const picoboot_ops_t picoboot_ops = {
     .write = app_picoboot_write,
     .otp_read = picoboot_default_otp_read,
     .otp_write = picoboot_default_otp_write,
-.get_info = picoboot_default_get_info,};
-
+.get_info = picoboot_default_get_info,
+};
 // One ROM picoboot protocol extenson handler
 static pb_status_t onerom_picobootx_dispatch(
     const picoboot_cmd_t *cmd,
