@@ -128,19 +128,21 @@ static void hts_feed(uint8_t b) {
         else hts_parser_idle();
         break;
     case HTS_B_R2:
-        if (b == 'R') hts.state = HTS_B_CKSUM;
-        else hts_parser_idle();
-        break;
-    case HTS_B_CKSUM:
-        /* 'B' + 'R' + 'R' == 0xE6. */
-        if (b == 0xE6u) {
-            hts_reply_byte(0x00);
-            hts.good_packets++;
-        } else {
-            hts.bad_packets++;
-        }
+    if (b == 'R') {
+        hts_reply_byte(0x00);
+        hts.good_packets++;
+        hts.state = HTS_B_CKSUM;
+    } else {
         hts_parser_idle();
-        break;
+    }
+    break;
+    case HTS_B_CKSUM:
+    /* HTS sends the checksum after BRR. Swallow it silently. */
+    if (b != 0xE6u) {
+        hts.bad_packets++;
+    }
+    hts_parser_idle();
+    break;
 
     case HTS_S_PARAM:
         hts.checksum = (uint8_t)('S' + b);
