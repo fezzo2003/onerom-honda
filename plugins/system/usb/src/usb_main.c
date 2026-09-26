@@ -272,7 +272,7 @@ void tud_cdc_rx_cb(uint8_t itf) {
         usb_hts_rx(buf, count);
     }
 }
-}
+
 
 // Invoked when a control transfer is received on vendor interface
 // Used to respond to MS OS 2.0 descriptor request from Windows
