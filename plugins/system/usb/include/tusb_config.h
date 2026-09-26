@@ -41,7 +41,7 @@
 // One ROM specific configuration
 #define __not_in_flash(x)
 #define CFG_TUD_TASK_QUEUE_SZ     4
-#define CFG_TUD_ENDPOINT_MAX      6
+#define CFG_TUD_ENDPOINT_MAX      4
 #define USB_MAX_ENDPOINTS         CFG_TUD_ENDPOINT_MAX
 
 //--------------------------------------------------------------------+
@@ -106,7 +106,7 @@
 #endif
 
 //------------- CLASS -------------//
-#define CFG_TUD_CDC               2
+#define CFG_TUD_CDC               1
 #define CFG_TUD_MSC               0
 #define CFG_TUD_HID               0
 #define CFG_TUD_MIDI              0
