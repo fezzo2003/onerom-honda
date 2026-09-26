@@ -6,6 +6,10 @@ static hts_context_t hts;
 static bool hts_tx_pending = false;
 static uint8_t hts_tx_pending_byte = 0;
 
+#define HTS_TRACE_SIZE 32
+static uint8_t hts_trace[HTS_TRACE_SIZE];
+static uint8_t hts_trace_len = 0;
+
 static void hts_try_pending_reply(void) {
     if (!hts_tx_pending) return;
     if (!tud_cdc_n_connected(0)) return;
