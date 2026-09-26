@@ -33,8 +33,7 @@ jobs:
           key: arm-toolchain-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('ci/arm-toolchain-version') }}
 
       - name: Install pinned Arm GNU toolchain
-        run: echo "TOOLCHAIN=$(ci/install-arm-toolchain.sh)" >> "$GITHUB_ENV"
-
+        run: echo "TOOLCHAIN=$(bash ci/install-arm-toolchain.sh)" >> "$GITHUB_ENV"
       - name: Build OneROM v0.7.1 minimal base firmware
         run: make firmware
 
