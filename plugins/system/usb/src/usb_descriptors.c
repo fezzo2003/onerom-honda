@@ -81,12 +81,12 @@ enum
   ITF_NUM_VENDOR,
   ITF_NUM_CDC,
   ITF_NUM_CDC_DATA,
-  ITF_NUM_CDC2,
-  ITF_NUM_CDC2_DATA,
+
+  
   ITF_NUM_TOTAL
 };
 
-#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + (2 * TUD_CDC_DESC_LEN) + TUD_VENDOR_DESC_LEN + 9)
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CDC_DESC_LEN + TUD_VENDOR_DESC_LEN + 9)
 
 uint8_t const desc_configuration[] =
 {
@@ -107,7 +107,7 @@ uint8_t const desc_configuration[] =
   // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
   TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 6, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, 0x80 | EPNUM_CDC_IN, TUD_OPT_HIGH_SPEED ? 512 : 64),
 
-  TUD_CDC_DESCRIPTOR(ITF_NUM_CDC2, 7, EPNUM_CDC2_NOTIF, 8, EPNUM_CDC2_OUT, 0x80 | EPNUM_CDC2_IN, TUD_OPT_HIGH_SPEED ? 512 : 64),
+
 
 };
 
