@@ -232,13 +232,13 @@ void usb_main(
     ora_yield_fn_t yield = ora_lookup_fn(ORA_ID_YIELD);
 
     while (1) {
-        tud_task();
-        usb_picoboot_task();
-        usb_hts_task();
-        usb_cn2_task();
-        // usb_plugin_task();
-        yield(NULL);
-    }
+    tud_task();
+    usb_picoboot_task();
+    usb_hts_task();
+    // usb_cn2_task();
+    usb_plugin_task();
+    yield(NULL);
+}
 
     ERR("USB plugin exiting");
     return;
