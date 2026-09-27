@@ -11,6 +11,8 @@
 typedef enum {
     HTS_IDLE = 0,
     HTS_V_2ND,
+    HTS_N_S,
+    HTS_N_CKSUM,
     HTS_B_R1,
     HTS_B_R2,
     HTS_B_CKSUM,
