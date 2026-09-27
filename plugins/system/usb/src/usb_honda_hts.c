@@ -121,9 +121,34 @@ static void hts_feed(uint8_t b) {
     hts.deadline_ms = context.timer_ms + HONDA_HTS_TIMEOUT_MS;
 
     switch (hts.state) {
-    case HTS_IDLE:
+case HTS_IDLE:
     if (b == 'V') hts.state = HTS_V_2ND;
-        case HTS_N_S:
+    else if (b == 'N') hts.state = HTS_N_S;
+    else if (b == 'B') hts.state = HTS_B_R1;
+    else if (b == 'S') hts.state = HTS_S_PARAM;
+    else if (b == 'Z') hts.state = HTS_Z_CMD;
+    break;
+
+case HTS_V_2ND:
+    if (b == 'V') {
+        static const uint8_t version_reply[3] = {
+            0x14, 0x09, 0x4F
+        };
+
+        if (tud_cdc_n_write_available(0) >= 3) {
+            tud_cdc_n_write(0, version_reply, 3);
+            tud_cdc_n_write_flush(0);
+        }
+
+        hts.good_packets++;
+    } else {
+        hts.bad_packets++;
+    }
+
+    hts_parser_idle();
+    break;
+
+case HTS_N_S:
     if (b == 'S') {
         hts.state = HTS_N_CKSUM;
     } else {
