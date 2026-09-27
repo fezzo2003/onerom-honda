@@ -290,35 +290,70 @@ void usb_hts_init(void) {
 }
 
 void usb_hts_rx(const uint8_t *data, uint32_t len) {
-    /*
-     * Diagnostic commands:
-     * F1 = clear trace
-     * F0 = return trace: first byte is length, followed by captured bytes
-     */
-    if (len == 1 && data[0] == 0xF1) {
-        hts_trace_len = 0;
-        return;
-    }
-
-    if (len == 1 && data[0] == 0xF0) {
-        if (tud_cdc_n_write_available(0) >= (uint32_t)(hts_trace_len + 1)) {
-            tud_cdc_n_write_char(0, (char)hts_trace_len);
-
-            if (hts_trace_len) {
-                tud_cdc_n_write(0, hts_trace, hts_trace_len);
-            }
-
-            tud_cdc_n_write_flush(0);
-        }
-        return;
-    }
+    static uint8_t diag_pos = 0;
 
     for (uint32_t i = 0; i < len; ++i) {
-        if (hts_trace_len < HTS_TRACE_SIZE) {
-            hts_trace[hts_trace_len++] = data[i];
+        uint8_t b = data[i];
+
+        /*
+         * Diagnostic commands:
+         * DE AD F1 = clear trace
+         * DE AD F0 = dump trace
+         */
+        if (diag_pos == 0 && b == 0xDE) {
+            diag_pos = 1;
+            continue;
         }
 
-        hts_feed(data[i]);
+        if (diag_pos == 1) {
+            if (b == 0xAD) {
+                diag_pos = 2;
+                continue;
+            }
+
+            /* Previous DE wasn't a diagnostic command. */
+            if (hts_trace_len < HTS_TRACE_SIZE)
+                hts_trace[hts_trace_len++] = 0xDE;
+
+            hts_feed(0xDE);
+            diag_pos = 0;
+        }
+
+        if (diag_pos == 2) {
+            if (b == 0xF1) {
+                hts_trace_len = 0;
+                diag_pos = 0;
+                continue;
+            }
+
+            if (b == 0xF0) {
+                tud_cdc_n_write_char(0, (char)hts_trace_len);
+
+                if (hts_trace_len) {
+                    tud_cdc_n_write(0, hts_trace, hts_trace_len);
+                }
+
+                tud_cdc_n_write_flush(0);
+                diag_pos = 0;
+                continue;
+            }
+
+            /* DE AD wasn't actually a diagnostic command. */
+            if (hts_trace_len < HTS_TRACE_SIZE)
+                hts_trace[hts_trace_len++] = 0xDE;
+            if (hts_trace_len < HTS_TRACE_SIZE)
+                hts_trace[hts_trace_len++] = 0xAD;
+
+            hts_feed(0xDE);
+            hts_feed(0xAD);
+            diag_pos = 0;
+        }
+
+        if (hts_trace_len < HTS_TRACE_SIZE) {
+            hts_trace[hts_trace_len++] = b;
+        }
+
+        hts_feed(b);
     }
 }
 
