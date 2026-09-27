@@ -276,7 +276,8 @@ case HTS_N_CKSUM:
 }
 
 void usb_hts_init(void) {
-    hts_tx_pending = false; 
+    hts_tx_pending = false;
+    hts_trace_len = 0;
     hts.state = HTS_IDLE;
     hts.slots_ready = false;
     hts.good_packets = hts.bad_packets = hts.timeouts = 0;
