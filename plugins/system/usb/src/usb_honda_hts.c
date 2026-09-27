@@ -123,6 +123,36 @@ static void hts_feed(uint8_t b) {
     switch (hts.state) {
     case HTS_IDLE:
     if (b == 'V') hts.state = HTS_V_2ND;
+        case HTS_N_S:
+    if (b == 'S') {
+        hts.state = HTS_N_CKSUM;
+    } else {
+        hts.bad_packets++;
+        hts_parser_idle();
+    }
+    break;
+
+case HTS_N_CKSUM:
+    if (b == 0xA1) {
+        static const uint8_t ns_reply[10] = {
+            0x00,
+            0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF,
+            0x99
+        };
+
+        if (tud_cdc_n_write_available(0) >= sizeof(ns_reply)) {
+            tud_cdc_n_write(0, ns_reply, sizeof(ns_reply));
+            tud_cdc_n_write_flush(0);
+        }
+
+        hts.good_packets++;
+    } else {
+        hts.bad_packets++;
+    }
+
+    hts_parser_idle();
+    break;
     else if (b == 'B') hts.state = HTS_B_R1;
     else if (b == 'S') hts.state = HTS_S_PARAM;
     else if (b == 'Z') hts.state = HTS_Z_CMD;
